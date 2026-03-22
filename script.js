@@ -1,123 +1,305 @@
-// 1. Zoom Logic (Desktop Only)
-const zoomBox = document.getElementById('zoom-box');
-const img = document.getElementById('main-img');
+const header = document.querySelector(".main-header");
+const navToggle = document.querySelector(".nav-toggle");
+const navTargets = document.querySelectorAll(".nav-right a");
+const navPanel = document.getElementById("site-nav");
 
-if (zoomBox && img) {
-    zoomBox.addEventListener('mousemove', (e) => {
-        if (window.innerWidth > 768) { // Only zoom on Desktop
-            const rect = zoomBox.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            img.style.transformOrigin = `${x}px ${y}px`;
-            img.style.transform = "scale(2.5)";
-        }
+function setNavOpen(isOpen) {
+    if (!header || !navToggle || !navPanel) {
+        return;
+    }
+
+    header.classList.toggle("nav-open", isOpen);
+    navToggle.setAttribute("aria-expanded", String(isOpen));
+}
+
+if (header && navToggle && navPanel) {
+    navToggle.addEventListener("click", () => {
+        const isOpen = header.classList.contains("nav-open");
+        setNavOpen(!isOpen);
     });
 
-    zoomBox.addEventListener('mouseleave', () => {
-        img.style.transform = "scale(1)";
-        img.style.transformOrigin = "center";
+    navTargets.forEach((link) => {
+        link.addEventListener("click", () => setNavOpen(false));
+    });
+
+    window.addEventListener("resize", () => {
+        if (window.innerWidth >= 896) {
+            setNavOpen(false);
+        }
     });
 }
 
-// 2. Unified FAQ Accordion Logic
-document.querySelectorAll('.faq-card').forEach(card => {
-    card.addEventListener('click', () => {
-        // Toggle current card
-        card.classList.toggle('active');
-        
-        // Update arrow icon
-        const icon = card.querySelector('.arrow-icon');
-        if (icon) {
-            icon.textContent = card.classList.contains('active') ? '▲' : '▼';
+const zoomBox = document.getElementById("zoom-box");
+const mainImage = document.getElementById("main-img");
+const canZoom = window.matchMedia("(hover: hover) and (pointer: fine)");
+
+if (zoomBox && mainImage && canZoom.matches) {
+    zoomBox.addEventListener("mousemove", (event) => {
+        if (window.innerWidth < 896) {
+            return;
+        }
+
+        const rect = zoomBox.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        mainImage.style.transformOrigin = `${x}px ${y}px`;
+        mainImage.style.transform = "scale(1.65)";
+    });
+
+    zoomBox.addEventListener("mouseleave", () => {
+        mainImage.style.transform = "scale(1)";
+        mainImage.style.transformOrigin = "center";
+    });
+}
+
+const faqCards = document.querySelectorAll(".faq-card");
+
+faqCards.forEach((card) => {
+    const button = card.querySelector(".faq-header");
+    const body = card.querySelector(".faq-body");
+    const arrow = card.querySelector(".arrow-icon");
+
+    if (!button || !body || !arrow) {
+        return;
+    }
+
+    button.addEventListener("click", () => {
+        const isActive = card.classList.contains("active");
+
+        faqCards.forEach((item) => {
+            const itemButton = item.querySelector(".faq-header");
+            const itemBody = item.querySelector(".faq-body");
+            const itemArrow = item.querySelector(".arrow-icon");
+
+            item.classList.remove("active");
+
+            if (itemButton) {
+                itemButton.setAttribute("aria-expanded", "false");
+            }
+
+            if (itemBody) {
+                itemBody.hidden = true;
+            }
+
+            if (itemArrow) {
+                itemArrow.innerHTML = "&#9660;";
+            }
+        });
+
+        if (!isActive) {
+            card.classList.add("active");
+            button.setAttribute("aria-expanded", "true");
+            body.hidden = false;
+            arrow.innerHTML = "&#9650;";
         }
     });
 });
 
-// 3. Dynamic Horizontal Scroll for Apps
-const scrollContainer = document.getElementById('apps-scroll-container');
-const nextBtn = document.getElementById('next-app');
-const prevBtn = document.getElementById('prev-app');
+const appsContainer = document.getElementById("apps-scroll-container");
+const nextButton = document.getElementById("next-app");
+const prevButton = document.getElementById("prev-app");
 
-if (scrollContainer && nextBtn && prevBtn) {
-    const scrollAmount = 320; // Card width + gap
-    nextBtn.addEventListener('click', () => scrollContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' }));
-    prevBtn.addEventListener('click', () => scrollContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' }));
+function updateAppButtons() {
+    if (!appsContainer || !nextButton || !prevButton) {
+        return;
+    }
+
+    const maxScrollLeft = appsContainer.scrollWidth - appsContainer.clientWidth - 4;
+    prevButton.disabled = appsContainer.scrollLeft <= 4;
+    nextButton.disabled = appsContainer.scrollLeft >= maxScrollLeft;
 }
 
-// 4. Manufacturing Process Content Switcher
+if (appsContainer && nextButton && prevButton) {
+    const getScrollAmount = () => {
+        const card = appsContainer.querySelector(".app-card");
+
+        if (!card) {
+            return 320;
+        }
+
+        const gap = Number.parseFloat(getComputedStyle(appsContainer).columnGap || getComputedStyle(appsContainer).gap) || 16;
+        return card.getBoundingClientRect().width + gap;
+    };
+
+    nextButton.addEventListener("click", () => {
+        appsContainer.scrollBy({ left: getScrollAmount(), behavior: "smooth" });
+    });
+
+    prevButton.addEventListener("click", () => {
+        appsContainer.scrollBy({ left: -getScrollAmount(), behavior: "smooth" });
+    });
+
+    appsContainer.addEventListener("scroll", updateAppButtons, { passive: true });
+    window.addEventListener("resize", updateAppButtons);
+    updateAppButtons();
+}
+
+const processTitle = document.getElementById("process-title");
+const processDescription = document.getElementById("process-desc");
+const processImage = document.getElementById("process-img");
+const processBullets = document.getElementById("process-bullets");
+const processButtons = document.querySelectorAll(".step-btn");
+
 const processData = {
-    raw: { title: "High-Grade Raw Material", desc: "Premium PE100 grade material for long life.", img: "assets/img.jpg" },
-    extrusion: { title: "Advanced Extrusion", desc: "Melted and pushed through precision dies.", img: "assets/img.jpg" },
-    cooling: { title: "Uniform Cooling", desc: "Water spray tanks for structural integrity.", img: "assets/img.jpg" },
-    sizing: { title: "Vacuum Sizing", desc: "Maintains perfect roundness and diameter.", img: "assets/img.jpg" },
-    quality: { title: "Quality Testing", desc: "Strict pressure and thickness gauging.", img: "assets/img.jpg" }
+    raw: {
+        title: "High-grade raw material selection",
+        description: "PE100 resin with controlled melt flow and strength characteristics is selected to deliver pressure-ready, long-life piping.",
+        image: "assets/img.jpg",
+        alt: "HDPE pipe raw material preparation",
+        bullets: [
+            "PE100 grade raw material",
+            "Consistent molecular weight distribution",
+            "High crack resistance for long service life"
+        ]
+    },
+    extrusion: {
+        title: "Precision extrusion",
+        description: "The compounded material is melted and pushed through calibrated dies to form a stable pipe profile with uniform wall thickness.",
+        image: "assets/HDPE.webp",
+        alt: "HDPE pipe extrusion process",
+        bullets: [
+            "Controlled temperature zoning",
+            "Accurate die sizing for dimensional stability",
+            "Continuous output monitoring"
+        ]
+    },
+    cooling: {
+        title: "Controlled cooling and support",
+        description: "Cooling tanks gradually stabilize the pipe shape while protecting roundness, straightness, and surface quality.",
+        image: "assets/Food.webp",
+        alt: "HDPE pipe cooling process",
+        bullets: [
+            "Gradual cooling to reduce stress",
+            "Surface finish protection",
+            "Enhanced structural consistency"
+        ]
+    },
+    sizing: {
+        title: "Vacuum sizing and calibration",
+        description: "Vacuum calibration maintains diameter accuracy and helps achieve repeatable tolerances across the production line.",
+        image: "assets/instal.webp",
+        alt: "HDPE pipe sizing and calibration",
+        bullets: [
+            "Precise OD control",
+            "Improved roundness retention",
+            "Stable sizing across long runs"
+        ]
+    },
+    quality: {
+        title: "Multi-point quality control",
+        description: "Every batch is checked for pressure capability, wall thickness, appearance, and dimensional compliance before dispatch.",
+        image: "assets/heat.jpg",
+        alt: "HDPE pipe quality control",
+        bullets: [
+            "Pressure and dimensional inspection",
+            "Wall thickness verification",
+            "Dispatch approval after final review"
+        ]
+    }
 };
 
-document.querySelectorAll('.step-btn').forEach(button => {
-    button.addEventListener('click', () => {
-        const target = button.getAttribute('data-target');
-        if (processData[target]) {
-            document.querySelector('.step-btn.active').classList.remove('active');
-            button.classList.add('active');
-            
-            document.getElementById('process-title').innerText = processData[target].title;
-            document.getElementById('process-desc').innerText = processData[target].desc;
-            document.getElementById('process-img').src = processData[target].img;
-        }
+if (processTitle && processDescription && processImage && processBullets && processButtons.length) {
+    processButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const key = button.dataset.target;
+            const data = processData[key];
+
+            if (!data) {
+                return;
+            }
+
+            processButtons.forEach((item) => {
+                item.classList.remove("active");
+                item.setAttribute("aria-selected", "false");
+            });
+
+            button.classList.add("active");
+            button.setAttribute("aria-selected", "true");
+
+            processTitle.textContent = data.title;
+            processDescription.textContent = data.description;
+            processImage.src = data.image;
+            processImage.alt = data.alt;
+
+            processBullets.innerHTML = data.bullets.map((bullet) => `<li>${bullet}</li>`).join("");
+        });
     });
-});
+}
 
-// You can add this to your existing scroll logic in script.js
-const testContainer = document.querySelector('.testimonials-grid');
-// If you add buttons with IDs 'next-test' and 'prev-test'
-// nextTestBtn.addEventListener('click', () => testContainer.scrollBy({ left: 370, behavior: 'smooth' }));
+const modal = document.getElementById("downloadModal");
+const openModalButton = document.querySelector(".btn-download");
+const closeModalButton = document.querySelector(".close-modal");
+const modalForm = document.getElementById("catalogueForm");
+const quickCatalogueForm = document.getElementById("catalogueRequestForm");
+const contactForm = document.getElementById("contactForm");
 
-
-// 1. Unified Modal Functions
 function openModal() {
-    const modal = document.getElementById('downloadModal');
-    if (modal) {
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden'; // Stop background scroll
+    if (!modal) {
+        return;
     }
+
+    modal.classList.add("active");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
 }
 
 function closeModal() {
-    const modal = document.getElementById('downloadModal');
-    if (modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = 'auto'; // Restore scroll
+    if (!modal) {
+        return;
     }
+
+    modal.classList.remove("active");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
 }
 
-// 2. The "Big Event": Click Download -> Open Modal + Open PDF
-const downloadBtn = document.querySelector('.btn-download');
-
-if (downloadBtn) {
-    downloadBtn.addEventListener('click', (e) => {
-        e.preventDefault(); 
-        
-        // Open the attractive modal you just styled
-        openModal(); 
-        
-        // Simultaneously open the real Mangalam PDF in a new tab
-        window.open('https://www.mangalampipes.co.in/pdf/PE-100_Thickness_Chart.pdf', '_blank');
+if (openModalButton) {
+    openModalButton.addEventListener("click", () => {
+        openModal();
+        window.open("https://www.mangalampipes.co.in/pdf/PE-100_Thickness_Chart.pdf", "_blank", "noopener");
     });
 }
 
-// 3. Form Submission "Success" Logic
-const catalogForm = document.getElementById('catalogueForm');
-if (catalogForm) {
-    catalogForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        // You can add an API call here later to save the email
-        alert("Success! Check your email for the complete Mangalam catalogue.");
+if (closeModalButton) {
+    closeModalButton.addEventListener("click", closeModal);
+}
+
+if (modal) {
+    modal.addEventListener("click", (event) => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+        closeModal();
+    }
+});
+
+if (modalForm) {
+    modalForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        window.alert("Thanks. Our team will share the brochure with you shortly.");
+        modalForm.reset();
         closeModal();
     });
 }
 
-// 4. Global Close Listeners (X button and clicking outside)
-window.addEventListener('click', (e) => {
-    const modal = document.getElementById('downloadModal');
-    if (e.target === modal) closeModal();
-});
+if (quickCatalogueForm) {
+    quickCatalogueForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        window.alert("Catalogue request received. We will email the details shortly.");
+        quickCatalogueForm.reset();
+    });
+}
+
+if (contactForm) {
+    contactForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        window.alert("Thanks. Your custom quote request has been captured.");
+        contactForm.reset();
+    });
+}
